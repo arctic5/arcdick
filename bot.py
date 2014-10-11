@@ -9,7 +9,9 @@ import string
 import json
 import random
 import csv
-import xml.etree.ElementTree as e
+import hashlib
+import cmds
+from m8ball import *
 
 try:
     with open('eat.json', 'rb') as fp:
@@ -27,39 +29,36 @@ PORT=6667
 NICK="arcdick"
 IDENT="arctic"
 REALNAME="arctic"
-CHAN="#gg2other"
+CHAN="#gg2test"
 KEY = "420"
 
+
+# if len(sys.argv[0])>0:
+    # exec(open(sys.argv[1]).read())
 
 NICKSERV_IDENT=None
 
 OWNER=""
-OWNER_VERIFY="~arctic@75-140-75-64.dhcp.mtpk.ca.charter.com"
+OWNER_VERIFY="~arctsdsddic@75-140-75-64.dhcp.mtpk.ca.charter.com"
+
+LOGINMD5 = '1a50c4f531d1f061b8689c69daac7583'
 
 ## Variables
 joined=False
 ops = []
 tell = {}
-
+admins = []
 ignore = []
-f = open('ignore.csv', 'r+')
-try:
-    ignore = list(csv.reader(f))
-finally:
-    f.close()
-    del f
+
+# f = open('ignore.csv', 'r+')
+# try:
+    # ignore = list(csv.reader(f))
+# finally:
+    # f.close()
+    # del f
 
 readbuffer=""
 
-
-"""
-messages = []
-messages[0] = "HIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"
-messages[1] = "FYI PRIM IS A FAG"
-messages[2] = "Don't stick your semen under the desk!!!"
-messages[3] = ""
-"""
-#m8ballsize = 19
 m8ball = []
 m8ball.append("Don't count on it")
 m8ball.append('My reply is no')
@@ -91,6 +90,7 @@ def send(msg):
     except UnicodeEncodeError:
         print "UNICODE ENCODE ERROR: %s"%line
 def send_silent(msg):
+    line = "%s\r\n" % msg
     try:
         s.send(line)
     except UnicodeEncodeError:
@@ -113,7 +113,7 @@ while 1:
     readbuffer=readbuffer+s.recv(1024)
     temp=string.split(readbuffer, "\n")
     readbuffer=temp.pop()
-
+    
     for line in temp:
         line=string.rstrip(line)
         print line
@@ -129,12 +129,9 @@ while 1:
             user = userbits[0]
             userip = userbits[1]
             #sendtochan(userip)
-
             if (str(user) in tell):
                 send("PRIVMSG %s :%s" % (CHAN,user + ", " + tell[str(user)]))
                 del tell[str(user)]
-            #send("PRIVMSG %s :%s" % (CHAN,"HIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"))
-
         elif line[1]=="INVITE" and line[3].lstrip(':')==CHAN:
             send("JOIN %s" % (CHAN))
         elif line[1]=="MODE": ## MODE
@@ -167,26 +164,15 @@ while 1:
             msg = line[3:]
             msg[0] = msg[0].lstrip(':')
             msgtext = ' '.join(msg)
-            # if (msgtext.count('youtube.com/watch') > 0):
-                # easdsad = ET.fromstring(country_data_as_string)
-                # for atype in easdsad.findall('title'):
-                    # print(atype.get('type'))
             if (str(user) in tell):
                 send("PRIVMSG %s :%s" % (CHAN,user + ", " + tell[str(user)]))
                 del tell[str(user)]
-            #ignore commands from ignore
             if msgtext[0] == '!':
+                
                 _cmd = msg[0][1:]
                 cmd = _cmd.lower()
                 if cmd == 'say':
                     sendtochan(' '.join(msg[1:]))
-                if cmd == 'calculate':
-                    try:
-                        #sendtochan(eval(' '.join(msg[1:])))
-                        pass
-                    except:
-                        # sendtochan('I cannot calculate that')
-                        pass
                 elif cmd == 'tell':
                     tell[str(''.join(msg[1]))] = str(user + ' wanted to tell you: '+ ' '.join(msg[2:]))
                     sendtochan("I'll tell him the next time I see him")
@@ -196,42 +182,21 @@ while 1:
                         sendtochan(m8ball[i])
                     except:
                         sendtochan(i)
-                # elif cmd == 'eat':
-                    # stuff_i_ate[str(''.join(msg[1:]))] = len(stuff_i_ate[str(''.join(msg[1:]))]) + 1
-                    # sendtochan("Now I ate " + str(stuff_i_ate[str(''.join(msg[1:]))]) + msg[1:] + "'s")
-                    # with open('eat.json', 'wb') as fp:
-                        # json.dump(stuff_i_ate, fp)
-                if userbits[1] == OWNER_VERIFY:
+                elif cmd == 'login':
+                    if (hashlib.md5(''.join(msg[1])).hexdigest() == LOGINMD5):
+                        admins.append(userbits[1])
+                        sendprivmsg(user, "Successfully logged in")
+                    else:
+                        sendprivmsg(user, "No")
+                if (userbits[1] == OWNER_VERIFY or userbits[1] in admins):
                     if cmd == 'kick':
                         sendcommand("KICK ",CHAN,' '.join(msg[1:]))
                     elif cmd == 'op':
                         sendmode(CHAN,"+o"," ".join(msg[1:]))
                     elif cmd == 'voice':
                         sendmode(CHAN,"+v"," ".join(msg[1:]))
-                    elif cmd == 'names':
-                        send("NAMES %s" % (CHAN))
                     elif cmd == 'nick':
                         send("NICK %s"%' '.join(msg[1:]))
-                    elif cmd == 'ignore':
-                        ignore.append(' '.join(msg[1:]))
-                        ignoref = open('ignore.csv', 'w+')
-                        print "ignored " + ' '.join(msg[1:])
-                        try:
-                            writer = csv.writer(ignoref)
-                            writer.writerow(ignore)
-                        finally:
-                            ignoref.close()
-                            del ignoref
-                    elif cmd == 'unignore':
-                        ignore.remove(' '.join(msg[1:]))
-                        print "ignored " + ' '.join(msg[1:])
-                        ignoref = open('ignore.csv', 'w+')
-                        try:
-                            writer = csv.writer(ignoref)
-                            writer.writerow(ignore)
-                        finally:
-                            ignoref.close()
-                            del ignoref
                     elif cmd == 'exec':
                         try:
                             sendtochan(eval(' '.join(msg[1:])))
