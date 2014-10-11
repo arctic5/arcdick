@@ -10,7 +10,6 @@ import json
 import random
 import csv
 import hashlib
-import cmds
 from m8ball import *
 
 try:
